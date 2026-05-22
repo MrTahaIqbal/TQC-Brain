@@ -2,7 +2,7 @@
 
 > **Institutional-grade C++20 algorithmic trading brain — SIMD · Lock-Free · Zero-Heap hot path**
 
-A production-quality ML inference and signal generation engine for cryptocurrency perpetual futures, built as a stateless HTTP microservice. Designed to run on HuggingFace Spaces (free tier) and communicate with a Windows 10 execution layer over HTTPS.
+A production-quality ML inference and signal generation engine for cryptocurrency perpetual futures, built as a stateless HTTP microservice.
 
 ---
 
@@ -24,7 +24,7 @@ The system demonstrates:
 ## Architecture
 
 ```
-Executor (Windows 10)
+Executor 
   └── POST /predict ──► HttpServer (4 workers, MPSC ring buffer)
                               │
                     ┌─────────┴──────────┐
@@ -63,7 +63,7 @@ Executor (Windows 10)
            Ranker (insertion sort, correlation dedup)
                     │
                     ▼
-           JsonBuilder (direct buffer, RFC 8259)
+           JsonBuilder (direct buffer)
                     │
                     ▼
   └── JSON Response ──► Executor
@@ -134,25 +134,22 @@ brain/
 
 ## Building
 
-### Docker (HuggingFace Spaces / any Linux)
+### Docker 
 ```bash
-docker build -t brain .
-docker run -e BRAIN_SECRET=your_secret_here -p 7860:7860 brain
-```
+
 
 ### Local (Linux / WSL2)
 ```bash
 # Requirements: GCC 13+, CMake 3.22+, Ninja
 cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build --target brain --parallel
-BRAIN_SECRET=your_secret_here ./build/brain
-```
+
 
 ### Debug (ASAN + UBSan)
 ```bash
 cmake -B build_debug -DCMAKE_BUILD_TYPE=Debug
 cmake --build build_debug --target brain --parallel
-BRAIN_SECRET=dev_secret ./build_debug/brain
+
 ```
 
 ---
@@ -164,50 +161,40 @@ Copy `settings.json.example` to `settings.json` and edit:
 ```json
 {
     "PAIRS": ["BTCUSDT", "ETHUSDT", "SOLUSDT"],
-    "LEVERAGE": 3,
-    "RISK_PCT": 0.0105,
-    "MAX_DAILY_DD": 0.05,
-    "MAX_OPEN_POSITIONS": 3,
-    "FEE_PCT": 0.0004,
-    "SLIP_PCT": 0.0002,
-    "TP_RR_RATIO": 2.0,
-    "HARD_FLOOR_USD": 15.0,
-    "TOP_N_SIGNALS": 5,
-    "MIN_RANK_SCORE": 0.45,
+    "LEVERAGE":,
+    "RISK_PCT":,
+    "MAX_DAILY_DD": ,
+    "MAX_OPEN_POSITIONS": ,
+    "FEE_PCT": ,
+    "SLIP_PCT": ,
+    "TP_RR_RATIO": ,
+    "HARD_FLOOR_USD": ,
+    "TOP_N_SIGNALS": ,
+    "MIN_RANK_SCORE": ,
     "RANKER_WEIGHTS": {
-        "confidence": 0.35,
-        "hurst":      0.20,
-        "adx":        0.15,
-        "tf_agree":   0.15,
-        "vol_q":      0.15
+        "confidence": ,
+        "hurst":      ,
+        "adx":        ,
+        "tf_agree":   ,
+        "vol_q":     
     },
     "CAPITAL_TIERS": {
-        "vol_target_pct":  0.015,
-        "kelly_coldstart": 0.0105,
-        "conservative": { "risk_pct": 0.005, "max_margin_pct": 0.15 },
-        "standard":     { "risk_pct": 0.010, "max_margin_pct": 0.25 },
-        "aggressive":   { "risk_pct": 0.020, "max_margin_pct": 0.40 },
-        "min_risk_pct": 0.003,
-        "max_risk_pct": 0.030
+        "vol_target_pct":  ,
+        "kelly_coldstart": ,
+        "conservative": { "risk_pct": , "max_margin_pct":  },
+        "standard":     { "risk_pct": , "max_margin_pct":  },
+        "aggressive":   { "risk_pct": , "max_margin_pct":  },
+        "min_risk_pct": ,
+        "max_risk_pct": 
     }
 }
 ```
 
-Set `BRAIN_SECRET` as an environment variable (never in source):
-```bash
-export BRAIN_SECRET=your_shared_key_here
+
 ```
 
 ---
 
-## API
-
-### `POST /predict`
-Accepts a JSON body with `account_info` and `market_data` array.
-Returns `ranked_signals` (top-N) and `all_signals` (all symbols processed).
-
-### `GET /health`
-Returns `{"status":"ok","uptime_s":...}` — used by Docker HEALTHCHECK.
 
 ### `GET /analytics`
 Returns per-symbol Sharpe, Sortino, Calmar, win rate, and portfolio P&L.
@@ -254,5 +241,5 @@ MIT — see [LICENSE](LICENSE).
 
 ## Author
 
-**Taha Iqbal** — Self-taught systems developer  
+**Taha Iqbal** — Systems developer/ AI saftey researcher  
 Built solo as a demonstration of institutional-grade quantitative systems engineering in C++20.
