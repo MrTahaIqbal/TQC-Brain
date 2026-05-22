@@ -35,7 +35,7 @@ target_compile_options(brain PRIVATE
     $<$<CONFIG:Release>:-O3>
     $<$<CONFIG:Release>:-DNDEBUG>
 
-    # AVX2 + FMA — HuggingFace Spaces runs on Intel Xeon (AVX2 guaranteed).
+   
     # -march=x86-64-v3 = AVX2 + FMA + BMI2 — portable cross-Xeon binary.
     # Safer than -march=native in Docker multi-stage builds: the builder
     # container CPU may differ from the runtime container CPU.
@@ -117,7 +117,7 @@ add_custom_target(brain_debug
 )
 
 message(STATUS "──────────────────────────────────────────────────")
-message(STATUS "Project:   BigBoyAgent-Brain v12 | Taha Iqbal")
+message(STATUS "Project:   TQC-Brain v12 | Taha Iqbal")
 message(STATUS "Build:     ${CMAKE_BUILD_TYPE}")
 message(STATUS "Compiler:  ${CMAKE_CXX_COMPILER}")
 message(STATUS "Standard:  C++20 (std::jthread, std::bit_cast, std::span)")
