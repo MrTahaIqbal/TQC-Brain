@@ -1,0 +1,50 @@
+# ── Build artifacts ───────────────────────────────────────────────────────────
+build/
+build_debug/
+*.o
+*.a
+brain
+brain_debug
+
+# ── CRITICAL: Never commit these ──────────────────────────────────────────────
+# Real credentials and live config — use settings.json.example as template
+settings.json
+*.env
+.env
+.env.*
+
+# Position state (contains live trade data)
+/tmp/brain_state/
+brain_state/
+positions.json
+
+# ── IDE / OS ──────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ── Compiler / toolchain ──────────────────────────────────────────────────────
+compile_commands.json
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.ninja
+.ninja_deps
+.ninja_log
+
+# ── Downloaded dependencies ───────────────────────────────────────────────────
+# json.hpp is downloaded by Dockerfile at build time — do not commit it
+json.hpp
+
+# ── Sanitiser / profiler outputs ──────────────────────────────────────────────
+*.asan
+*.prof
+*.gcov
+*.gcda
+*.gcno
+callgrind.out.*
+massif.out.*
