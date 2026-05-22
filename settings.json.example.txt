@@ -1,0 +1,60 @@
+{
+    "PAIRS": [
+        "BTCUSDT",
+        "ETHUSDT",
+        "SOLUSDT",
+        "BNBUSDT",
+        "XRPUSDT",
+        "ADAUSDT",
+        "LTCUSDT",
+        "DOTUSDT",
+        "LINKUSDT",
+        "AVAXUSDT",
+        "MATICUSDT",
+        "NEARUSDT",
+        "ICPUSDT",
+        "STXUSDT",
+        "RNDRUSDT",
+        "ARBUSDT",
+        "OPUSDT",
+        "APTUSDT",
+        "SUIUSDT",
+        "INJUSDT"
+    ],
+    "LEVERAGE":           3,
+    "RISK_PCT":           0.0105,
+    "MAX_DAILY_DD":       0.05,
+    "MIN_NOTIONAL":       20.0,
+    "MAX_OPEN_POSITIONS": 3,
+    "FEE_PCT":            0.0004,
+    "SLIP_PCT":           0.0002,
+    "TP_RR_RATIO":        2.0,
+    "HARD_FLOOR_USD":     15.0,
+    "TOP_N_SIGNALS":      5,
+    "MIN_RANK_SCORE":     0.45,
+    "RANKER_WEIGHTS": {
+        "confidence": 0.35,
+        "hurst":      0.20,
+        "adx":        0.15,
+        "tf_agree":   0.15,
+        "vol_q":      0.15
+    },
+    "CAPITAL_TIERS": {
+        "vol_target_pct":  0.015,
+        "kelly_coldstart": 0.0105,
+        "conservative": {
+            "risk_pct":       0.005,
+            "max_margin_pct": 0.15
+        },
+        "standard": {
+            "risk_pct":       0.010,
+            "max_margin_pct": 0.25
+        },
+        "aggressive": {
+            "risk_pct":       0.020,
+            "max_margin_pct": 0.40
+        },
+        "min_risk_pct": 0.003,
+        "max_risk_pct": 0.030
+    }
+}
