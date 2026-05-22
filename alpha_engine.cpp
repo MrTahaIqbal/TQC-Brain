@@ -41,13 +41,6 @@
  *            adj = s.confidence + composite * alpha_weight
  *          is applied identically to BUY and SELL signals.
  *
- *          For a SELL signal with composite = +0.80 (symbol has the strongest
- *          momentum cross-sectionally — a bullish cross-sectional signal):
- *            adj = 0.62 + 0.80 * 0.20 = 0.78
- *          The alpha engine INCREASES sell confidence when cross-sectional
- *          evidence is BULLISH.  This is directionally backwards: strong
- *          cross-sectional bullish alpha should REDUCE confidence in a SELL,
- *          not increase it.
  *
  *          FIX: for SELL signals, negate the composite before blending.
  *          Unified formula: adj = confidence + dir_sign * composite * alpha_weight
@@ -55,42 +48,10 @@
  *          Now: bullish composite boosts BUY and penalises SELL; bearish
  *          composite penalises BUY and boosts SELL — directionally correct.
  *
- * BUG-AE3  applyAlphaToSignals(): alpha blend clamp ignores regime conf_cap.
+ * 
+ *     
  *
- *          The signal engine caps confidence to params.conf_cap before this
- *          function is called (e.g. 0.65 for NOISE, 0.99 for TRENDING).
- *          The blend then adds up to alpha_weight (0.20) on top, clamping
- *          only to the hard 0.99 ceiling:
- *            clamp(adj, 0.01f, 0.99f)
- *          For NOISE: 0.65 + 0.20 = 0.85 — 31% above the regime cap.
- *          The conf_cap exists to limit overconfident sizing in choppy markets;
- *          alpha blending was silently overriding it.
  *
- *          FIX: clamp the blended result to a symmetric band of ±alpha_weight
- *          around the pre-alpha confidence value:
- *            lower = max(0.01, s.confidence - alpha_weight)
- *            upper = min(0.99, s.confidence + alpha_weight)
- *          This guarantees alpha can only MODULATE confidence by at most
- *          alpha_weight in either direction — it cannot override the regime
- *          cap by more than alpha_weight regardless of composite magnitude.
- *          With alpha_weight=0.20 (default), the worst-case overshoot of
- *          conf_cap is 0.20 — acceptable and intentional as alpha is an
- *          additional cross-sectional layer beyond regime-level filtering.
- *
- * BUG-AE4  volumeSurgeAlpha() and applyAlphaToSignals(): strncmp("BUY", 3)
- *          matches any 3-byte prefix — does not verify null terminator.
- *
- *          std::strncmp(s.signal, "BUY", 3) returns 0 for any string whose
- *          first 3 bytes are 'B','U','Y' — including a hypothetical "BUYS",
- *          "BUYY", etc.  For the current value set ("BUY"/"SELL"/"HOLD") this
- *          is safe by accident: no other value starts with "BUY".  But it is
- *          not defensive — a malformed signal field (e.g. from a JSON parser
- *          that writes a 4-byte value without null-termination) could match.
- *          FIX: compare 4 bytes ("BUY\0") to include the null terminator.
- *          "BUY" the string literal has a 4-byte representation in memory.
- *          strncmp(s.signal, "BUY", 4) matches exactly "BUY\0" — no prefix
- *          ambiguity.  Same fix applied to all strncmp comparisons in this
- *          file.
  *
  * ─────────────────────────────────────────────────────────────────────────────
  */
@@ -207,11 +168,11 @@ void applyAlphaToSignals(std::span<Signal> sigs, float alpha_weight) noexcept {
     rankNorm(vsurge_raw, vsurge, n);
     rankNorm(qual_raw,   qual,   n);
 
-    static constexpr float W_MOM  = 0.35f;
+    static constexpr float W_MOM  = 0.25f;
     static constexpr float W_LVOL = 0.25f;
     static constexpr float W_VS   = 0.25f;
-    static constexpr float W_QUAL = 0.15f;
-    // Weights sum to 1.0 — verified: 0.35 + 0.25 + 0.25 + 0.15 = 1.00.
+    static constexpr float W_QUAL = 0.25f;
+  
 
     for (int i = 0; i < n; ++i) {
         const float composite = simd::clamp(
