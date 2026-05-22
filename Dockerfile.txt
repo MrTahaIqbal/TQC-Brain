@@ -10,7 +10,7 @@
 # libraries installed in Stage 2 can diverge, producing silent ABI mismatch
 # or "version GLIBC_X.YY not found" errors at startup.
 #
-# For production HuggingFace Spaces deployment, pin the digest:
+#
 #   FROM gcc:13-bookworm@sha256:<digest> AS builder
 # Get the current digest with: docker pull gcc:13-bookworm && docker inspect gcc:13-bookworm
 # For local development and CI, the floating tag is acceptable.
@@ -35,14 +35,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # overwrite it only if the user intentionally provides their own version.
 #
 # BUG-DF2 FIX: curl uses --retry 3 --retry-delay 2 --fail-with-body.
-# Without --retry, a transient network error in the HuggingFace build
+#
 # environment causes curl to exit 0 with an empty file (some curl versions)
 # or exit non-zero (depends on curl version and --fail flag interaction).
 # An empty json.hpp causes a cryptic #include error at compile time with no
 # indication that the download failed.
-# --fail-with-body: exit non-zero on HTTP 4xx/5xx AND print the error body.
-# --retry 3: retries transient failures (connection reset, timeout).
-# --retry-delay 2: 2-second backoff between retries.
+# 
+# 
+# 
 RUN curl -fsSL \
         --retry 3 --retry-delay 2 --fail-with-body \
         https://github.com/nlohmann/json/releases/download/v3.11.3/json.hpp \
@@ -123,16 +123,6 @@ COPY --chown=nobody:nogroup *.json /app/
 # /tmp/brain_state (chmod 777 above) is writable by nobody for position persistence.
 USER nobody
 
-# Port 7860 is the HuggingFace Spaces default.
-# The PORT env var allows overriding for local development and VPS deployment.
-EXPOSE 7860
-ENV PORT=7860
 
-# Health check: probe /health every 30s, timeout 5s, allow 10s startup.
-# The brain logs "Pre-warm complete. Ready to serve." before the first accept();
-# the 10s start-period covers the pre-warm + first port bind.
-# grep -q: silent grep — exits 0 if the response contains "status":"ok".
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD wget -qO- http://localhost:7860/health | grep -q '"status":"ok"' || exit 1
 
 CMD ["./brain"]
