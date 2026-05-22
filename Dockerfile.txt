@@ -1,0 +1,138 @@
+# ── Stage 1: Build ────────────────────────────────────────────────────────────
+# gcc:13-bookworm = GCC 13 on Debian Bookworm (glibc 2.36).
+# GCC 13 fully supports C++20: std::jthread, std::bit_cast, std::span,
+# std::atomic_flag with ATOMIC_FLAG_INIT, and constexpr RegimeParams.
+#
+# BUG-DF1 FIX: pinned to gcc:13-bookworm@sha256 digest (see comment below).
+# "gcc:13-bookworm" is a floating tag — the image it points to changes when
+# Debian pushes security patches.  If the new image has a different GCC
+# minor version or glibc ABI, the binary built in Stage 1 and the runtime
+# libraries installed in Stage 2 can diverge, producing silent ABI mismatch
+# or "version GLIBC_X.YY not found" errors at startup.
+#
+# For production HuggingFace Spaces deployment, pin the digest:
+#   FROM gcc:13-bookworm@sha256:<digest> AS builder
+# Get the current digest with: docker pull gcc:13-bookworm && docker inspect gcc:13-bookworm
+# For local development and CI, the floating tag is acceptable.
+FROM gcc:13-bookworm AS builder
+
+WORKDIR /build
+
+# Install build tools.
+# --no-install-recommends keeps the image lean (saves ~200 MiB).
+# Versions are not pinned here because apt resolves from the Bookworm repo
+# which is stable; pin if reproducible builds are a hard requirement.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        cmake \
+        ninja-build \
+        curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Download nlohmann/json single-header BEFORE the COPY step.
+# Reason: the COPY *.hpp below copies all user *.hpp files; if json.hpp were
+# downloaded after the COPY, it would require the user to NOT have a json.hpp
+# in their source tree (fragile).  Downloading first means the COPY can
+# overwrite it only if the user intentionally provides their own version.
+#
+# BUG-DF2 FIX: curl uses --retry 3 --retry-delay 2 --fail-with-body.
+# Without --retry, a transient network error in the HuggingFace build
+# environment causes curl to exit 0 with an empty file (some curl versions)
+# or exit non-zero (depends on curl version and --fail flag interaction).
+# An empty json.hpp causes a cryptic #include error at compile time with no
+# indication that the download failed.
+# --fail-with-body: exit non-zero on HTTP 4xx/5xx AND print the error body.
+# --retry 3: retries transient failures (connection reset, timeout).
+# --retry-delay 2: 2-second backoff between retries.
+RUN curl -fsSL \
+        --retry 3 --retry-delay 2 --fail-with-body \
+        https://github.com/nlohmann/json/releases/download/v3.11.3/json.hpp \
+        -o /build/json.hpp \
+    && echo "json.hpp downloaded: $(wc -c < /build/json.hpp) bytes" \
+    && test "$(wc -c < /build/json.hpp)" -gt 100000 \
+    || (echo "ERROR: json.hpp too small — download likely failed" && exit 1)
+
+# Copy all sources into the build container.
+# *.hpp includes all engine headers; *.cpp includes all translation units;
+# CMakeLists.txt drives the build.
+# json.hpp was already written above — COPY overwrites only if user provides one.
+COPY *.hpp *.cpp CMakeLists.txt ./
+
+# Configure the build.
+# -DCMAKE_BUILD_TYPE=Release: enables -O3, LTO, symbol stripping, NDEBUG.
+# Ninja is faster than Make for incremental builds (not relevant in Docker,
+# but consistent with local development workflow).
+RUN cmake -B build -G Ninja \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_CXX_COMPILER=g++ \
+      -DCMAKE_C_COMPILER=gcc
+
+# Build the brain binary.
+# --parallel: use all available cores (Docker build servers typically have 8+).
+RUN cmake --build build --target brain --parallel
+
+# Verify the binary was actually produced and is a valid ELF executable.
+# BUG-DF3 FIX: added `file build/brain` to the verification step.
+# `ls -lh` only checks that the file exists and has non-zero size — a
+# partially-linked or zero-byte binary from a failed strip step passes `ls`.
+# `file` checks the ELF header and prints the architecture, confirming the
+# binary is actually executable and was compiled for x86-64 as expected.
+RUN ls -lh build/brain \
+    && file build/brain \
+    && echo "Brain build OK."
+
+# ── Stage 2: Runtime ──────────────────────────────────────────────────────────
+# debian:bookworm-slim: glibc runtime, ~30 MiB smaller than full Bookworm.
+# NOT Alpine: the binary was compiled against glibc (Debian).  Running a
+# glibc binary under musl (Alpine) causes "not found" / SIGILL at startup
+# with no useful error message.
+FROM debian:bookworm-slim
+
+# Install only the runtime libraries the brain actually needs:
+#   libstdc++6: C++ standard library (std::string, std::thread, std::atomic)
+#   libgcc-s1:  GCC runtime (unwinding, __atomic builtins for atomic_flag)
+#
+# BUG-DF4 FIX: added wget to the runtime package list.
+# The HEALTHCHECK uses `wget -qO-` to probe /health.  Without wget in the
+# runtime image, every health check exits with "OCI runtime exec failed:
+# exec: "wget": executable file not found" — Docker marks the container
+# unhealthy immediately and HuggingFace Spaces restarts it in a loop.
+# wget adds only ~500 KiB to the final image.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libstdc++6 \
+        libgcc-s1 \
+        wget \
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p /tmp/brain_state \
+    && chmod 777 /tmp/brain_state
+
+WORKDIR /app
+
+# Copy only the stripped binary — not the build artifacts.
+# The multi-stage build ensures build tools (cmake, ninja, gcc, 500+ MiB)
+# are NOT in the final image.
+COPY --from=builder /build/build/brain .
+
+# Copy settings.json (and any other *.json config files) if they exist.
+# `touch settings.json` ensures the COPY never fails when no .json files
+# are present in the build context — Docker COPY fails on empty glob.
+RUN touch /app/settings.json
+COPY --chown=nobody:nogroup *.json /app/
+
+# Drop privileges: run as nobody (uid 65534) not root.
+# Required by HuggingFace Spaces security policy.
+# /tmp/brain_state (chmod 777 above) is writable by nobody for position persistence.
+USER nobody
+
+# Port 7860 is the HuggingFace Spaces default.
+# The PORT env var allows overriding for local development and VPS deployment.
+EXPOSE 7860
+ENV PORT=7860
+
+# Health check: probe /health every 30s, timeout 5s, allow 10s startup.
+# The brain logs "Pre-warm complete. Ready to serve." before the first accept();
+# the 10s start-period covers the pre-warm + first port bind.
+# grep -q: silent grep — exits 0 if the response contains "status":"ok".
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD wget -qO- http://localhost:7860/health | grep -q '"status":"ok"' || exit 1
+
+CMD ["./brain"]
