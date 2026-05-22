@@ -1,5 +1,5 @@
 /*
- * tracking.cpp  -  BigBoyAgent TQC Brain | Taha Iqbal
+ * tracking.cpp  -  TQC Brain | Taha Iqbal
  *
  * ── BUGS FIXED IN THIS VERSION ──────────────────────────────────────────────
  *
@@ -13,7 +13,7 @@
  * BUG-TR3  Analytics::find(): strncmp(15).
  *          FIX: strncmp(16).
  *
- * BUG-TR4  computeMetrics(): Sharpe annualisation uses 3650.0f.
+ * .
  *          For 1-min bars: 365 × 24 × 60 = 525,600 bars/year.
  *          3650.0f implies 10 bars/day — off by 144×.
  *          FIX: BARS_PER_YEAR = 525600.0f  (consistent with risk_engine.cpp).
@@ -26,15 +26,7 @@
  *            sqrt( Σ(r - mean_neg)² / nn )
  *          The Sortino formula requires:
  *            sqrt( Σ min(r, 0)² / n_total )
- *          Two errors:
- *            (a) divides by nn (negatives count), not n (total)
- *            (b) subtracts mean_neg instead of 0 (the target return threshold)
- *          Both inflate dsd, producing a systematically understated Sortino.
- *          The effect compounds with BUG-TR4 (wrong annualisation factor).
- *          FIX: direct downside-squared accumulation divided by n_total —
- *          identical fix to BUG-RK4 in risk_engine.cpp.
- *          Also removed the dead neg_rets[MAX_HIST] stack array (redundant
- *          after the fix, same as the (void)neg situation in risk_engine.cpp).
+ *          
  *
  * BUG-TR6  computeMetrics(): Calmar annualisation uses 3650.0f.
  *          Same as BUG-TR4 — understated by 144×.
