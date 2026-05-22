@@ -1,8 +1,8 @@
 /*
- * regime_engine.cpp  -  BigBoyAgent TQC Brain | Taha Iqbal
+ * regime_engine.cpp  - TQC Brain | Taha Iqbal
  *
  * Market regime classification: TRENDING / MEAN_REVERTING / NOISE.
- *
+ * // I have remove the numerical thresholds because they are my proprietry
  * Pipeline per call:
  *   1. hurstRS()       — Hurst exponent via R/S analysis
  *   2. adx()           — ADX trend-strength (0→1 normalised)
@@ -29,91 +29,25 @@
  * BUG-RE5  [NEW] HMM observation symbol 3 ("flat high-vol") was structurally
  *          unreachable — the assignment condition was self-contradictory.
  *
- *          The original quantisation:
- *              const bool hi_vol = std::abs(z) > 1.5f;
- *              ...
- *              else if (std::abs(z) < 0.5f && hi_vol)  obs_seq[i] = 3;
+ *          
  *
- *          requires SIMULTANEOUSLY: |z| < 0.5 AND |z| > 1.5.
- *          These are mutually exclusive; obs_seq[i] = 3 was NEVER executed.
+ *    
  *
- *          Consequences of the dead symbol:
- *            (a) cnt_B[s][3] is always 0 in every hmmMStep() call.
- *                The `if (emit_sum > 0.5f)` guard never fires for symbol 3.
- *                g_B[:,3] never adapts from its seeded prior — frozen forever.
- *            (b) The model silently has 5 effective observation symbols, not 6.
- *                The 6-bin B matrix was calibrated with all 6 active; with
- *                symbol 3 dead, the SIDEWAYS state's flat-market probability
- *                mass (split between obs=2 "flat low-vol" and obs=3 "flat
- *                high-vol" in the prior) collapses entirely onto obs=2.
- *                SIDEWAYS is then permanently under-weighted in high-volatility
- *                flat markets — they are misclassified as BEAR or BULL.
+ *       
  *
- *          Root cause: hi_vol was derived from the normalised z-score, which
- *          already divides by sigma.  A flat return in a high-volatility
- *          environment produces BOTH small |z/sigma| (→ small |z|) AND small
- *          raw return — z-score normalisation erases the volatility distinction
- *          you are trying to capture.  You cannot distinguish "flat low-vol"
- *          from "flat high-vol" using z alone.
- *
- *          FIX: hi_vol now uses the window's absolute sigma against a fixed
- *          threshold calibrated for crypto 1-minute bars:
- *              const bool hi_vol = (sigma > 0.005f);
- *          0.005f = 0.5% per bar ≈ annualised 7.2% vol, which corresponds to
- *          the empirical ~75th percentile for major crypto pairs on 1-min data.
- *          This is independent of the current bar's return direction, so the
- *          four quadrants {high/low vol} × {bullish/bearish direction} are
- *          now representable.
- *
- *          The flat-return threshold is also tightened from |z| < 0.5 to
- *          |z| <= 0.25 to sharpen the boundary between "directional weak"
- *          (obs=1 or 4) and "truly flat" (obs=2 or 3), which better matches
- *          the B matrix prior design intent.
- *
- *          Updated 6-bin vocabulary:
- *              obs=0: z < -1.0              — strong down
- *              obs=1: -1.0 <= z < -0.25     — weak down
- *              obs=2: |z| <= 0.25, !hi_vol  — flat, calm market
- *              obs=3: |z| <= 0.25,  hi_vol  — flat, stressed market ← NOW REACHABLE
- *              obs=4: 0.25 < z < 1.0        — weak up
- *              obs=5: z >= 1.0              — strong up
+ *          
  *
  * BUG-RE6  [NEW] adx() and regSlope() used `int period` with `std::size_t n`
  *          — same BUG-FEC2 pattern fixed across feature_engine.cpp.
  *
- *          adx():     int period = 14, guard `n < (size_t)(period + 2)`,
- *                     loop `for (int i = 1; i <= period; ++i)`.
- *          regSlope(): int period = 20, guard `n < (size_t)(period)`,
- *                     loop `for (int i = 0; i < period; ++i)`.
+ *       
  *
- *          Both produce -Wsign-compare on comparisons between `int period`
- *          and `std::size_t n`.  The guard expressions `period + 2` and
- *          `period + 1` are signed-integer UB for INT_MAX — GCC 12+ at -O2
- *          can eliminate guards that would overflow.
- *
- *          FIX: both functions changed to `std::size_t period`.
- *          Guards simplified: `static_cast<std::size_t>(period + k)` → `period + k`.
- *          Loop variables changed from `int i` to `std::size_t i`.
- *          `const float fn = static_cast<float>(period)` is now a safe cast
- *          from size_t (all realistic period values fit in float exactly).
- *
+ *          
  * BUG-RE7  [NEW] `!hi_vol` in obs=1 condition was dead code masking BUG-RE5.
  *
- *          Original: `else if (z < 0.0f && !hi_vol)  obs_seq[i] = 1;`
+ *         
  *
- *          After the first branch (z < -1.0f → obs=0), the reachable range
- *          is [-1.0, 0).  In this range |z| ≤ 1.0 < 1.5, so hi_vol (originally
- *          defined as |z| > 1.5) is provably false.  `&& !hi_vol` never
- *          affected the branch outcome — it was dead code throughout.
- *
- *          It was added to "reserve" negative-z high-vol bars for a fallthrough
- *          to obs=3, but no such fallthrough path existed (obs=3 required
- *          |z| < 0.5, not z < 0).  The dead guard added confusion without
- *          providing any protection.
- *
- *          FIX: removed as part of the BUG-RE5 obs-quantisation rewrite.
- *          With hi_vol now sigma-based, the condition for obs=1 is simply
- *          `-1.0 <= z < -0.25` — clean and unambiguous.
+ *          F
  *
  * ─────────────────────────────────────────────────────────────────────────────
  */
@@ -132,9 +66,9 @@ namespace tqc {
 
 // ── Hurst Exponent (R/S Analysis) ────────────────────────────────────────────
 // Returns H ∈ [0, 1].
-//   H > 0.55 → trending (persistent)
-//   H < 0.45 → mean-reverting (anti-persistent)
-//   H ≈ 0.50 → random walk (NOISE)
+//   H >  → trending (persistent)
+//   H <  → mean-reverting (anti-persistent)
+//   H ≈  → random walk (NOISE)
 //
 // Requires n ≥ ~80-100 bars for a meaningful estimate (needs ≥ 4 lag points;
 // max_k = min(6, n/4) with each lag ≥ 4 requires n ≥ 80-100).
@@ -142,7 +76,7 @@ namespace tqc {
 // (neutral/NOISE), which suppresses all trades during the warm-up window.
 // This is intentional cold-start behaviour.
 static float hurstRS(const float* prices, std::size_t n) noexcept {
-    if (n < 20) [[unlikely]] return 0.5f;
+    if (n < ) [[unlikely]] return f;
 
     auto& sc = g_scratch;
     const std::size_t nr = n - 1;
@@ -216,7 +150,7 @@ static float hurstRS(const float* prices, std::size_t n) noexcept {
 }
 
 // ── ADX (normalised 0→1) ──────────────────────────────────────────────────────
-// ADX > 0.25 (≡ ADX > 25 on the 0-100 scale) → trending strength present.
+// ADX >  (≡ ADX >  on the 0-100 scale) → trending strength present.
 //
 // BUG-RE6 FIX: int period → std::size_t period.
 //   Original guard `n < static_cast<std::size_t>(period + 2)` contained a
@@ -254,7 +188,7 @@ static float adx(const float* c, const float* h, const float* l,
 
 // ── Regression slope (normalised) ────────────────────────────────────────────
 // Returns slope / mean_price: price-normalised directional momentum.
-// Range clamped to [-0.05, +0.05] (±5% per bar momentum).
+// Range clamped to [, ] ( per bar momentum).
 //
 // BUG-RE6 FIX: int period → std::size_t period.
 //   Same rationale as adx(). The signed `period` forced redundant casts
@@ -295,7 +229,7 @@ static float regSlope(const float* closes, std::size_t n,
 // p25 would receive a partially-sorted array and could return a wrong value.
 // The SIMD write also halves the memory bandwidth vs the copy+loop approach.
 static VolRegime volState(const float* closes, std::size_t n) noexcept {
-    if (n < 10) [[unlikely]] return VolRegime::NORMAL;
+    if (n < ) [[unlikely]] return VolRegime::NORMAL;
 
     auto& sc = g_scratch;
     const std::size_t nr = n - 1;
@@ -305,7 +239,7 @@ static VolRegime volState(const float* closes, std::size_t n) noexcept {
     }
     const float v = simd::std_dev(sc.scratch1.data(), nr);
 
-    if (nr >= 30) {
+    if (nr >= ) {
         // BUG-RE3 FIX: write |scratch1| into scratch2 via single SIMD pass.
         // Original: std::copy() + in-place abs loop — two passes, no SIMD.
         // simd::abs_diff(src, dst, n, mean=0.0f) computes |src[i] - 0| = |src[i]|.
@@ -317,17 +251,17 @@ static VolRegime volState(const float* closes, std::size_t n) noexcept {
         // p25 call leaves the upper 75% intact → p75 call finds the correct
         // 75th-percentile element in the untouched upper portion.
         // Reversing this order would give p25 a partially-sorted input → wrong result.
-        const float p25 = simd::percentile(sc.scratch2.data(), nr, 25.0f);
-        const float p75 = simd::percentile(sc.scratch2.data(), nr, 75.0f);
+        const float p25 = simd::percentile(sc.scratch2.data(), nr, f);
+        const float p75 = simd::percentile(sc.scratch2.data(), nr, f);
 
         if (v < p25)         return VolRegime::LOW;
-        if (v > p75 * 1.5f)  return VolRegime::HIGH;
+        if (v > p75 * f)  return VolRegime::HIGH;
         return VolRegime::NORMAL;
     }
 
     // Fallback thresholds for short history (< 30 bars)
-    if (v < 0.0008f) return VolRegime::LOW;
-    if (v > 0.004f)  return VolRegime::HIGH;
+    if (v < f) return VolRegime::LOW;
+    if (v > f)  return VolRegime::HIGH;
     return VolRegime::NORMAL;
 }
 
@@ -345,22 +279,22 @@ static VolRegime volState(const float* closes, std::size_t n) noexcept {
 // the Baum-Welch M-step with exponential forgetting (λ = 0.02 per call ≈
 // 50-call half-life ≈ ~50 minutes of data at one call/minute).
 
-static constexpr int N_STATES = 3;   // BEAR=0, SIDEWAYS=1, BULL=2
-static constexpr int N_OBS    = 20;  // Viterbi window (bars)
-static constexpr int N_EMIT   = 6;   // observation symbols
+static constexpr int N_STATES = ;   // BEAR=0, SIDEWAYS=1, BULL=2
+static constexpr int N_OBS    = ;  // Viterbi window (bars)
+static constexpr int N_EMIT   = ;   // observation symbols
 
 // Mutable A (transition) and B (emission) — updated online via hmmMStep().
 // Seeded from crypto empirical priors.
 static float g_A[N_STATES][N_STATES] = {
-    {0.70f, 0.25f, 0.05f},   // BEAR  → BEAR / SIDEWAYS / BULL
-    {0.15f, 0.70f, 0.15f},   // SIDEWAYS → ...
-    {0.05f, 0.25f, 0.70f},   // BULL  → BEAR / SIDEWAYS / BULL
+    {0.00f, 0.00f, 0.00f},   // BEAR  → BEAR / SIDEWAYS / BULL
+    {0.00f, 0.00f, 0.00f},   // SIDEWAYS → ...
+    {0.00f, 0.00f, 0.00f},   // BULL  → BEAR / SIDEWAYS / BULL
 };
 static float g_B[N_STATES][N_EMIT] = {
     //  sd_dn  wk_dn  fl_lv  fl_hv  wk_up  sd_up
-    {0.35f, 0.30f, 0.15f, 0.10f, 0.07f, 0.03f},  // BEAR
-    {0.05f, 0.15f, 0.25f, 0.25f, 0.15f, 0.05f},  // SIDEWAYS (symmetric/flat)
-    {0.03f, 0.07f, 0.15f, 0.10f, 0.30f, 0.35f},  // BULL
+    {0.00f, 0.00f, 0.00f, 0.00f, 0.00f, 0.00f},  // BEAR
+    {0.00f, 0.00f, 0.00f, 0.00f, 0.00f, 0.00f},  // SIDEWAYS (symmetric/flat)
+    {0.00f, 0.00f, 0.00f, 0.00f, 0.00f, 0.00f},  // BULL
 };
 // Single spinlock guards both g_A and g_B reads and writes.
 // g_A and g_B are GLOBAL (shared across all symbols — one Markov model for
@@ -444,15 +378,11 @@ static void hmmMStep(const int* state_seq, const int* obs_seq,
 // best_state can be extracted from the SECOND pass's final delta, making the
 // first pass completely redundant — 50% of all log() calls wasted.
 //
-// Fix: single merged pass populates both psi[t][s] at every step AND
-// accumulates the final delta array from which best_state is extracted.
-// With N_OBS=20 and N_STATES=3, this saves 20 × 3 × 3 = 180 log() calls
-// per symbol per cycle (~20 ns on a typical CPU at 1 log/ns throughput).
 static uint8_t hmmViterbi(const float* C, std::size_t n) noexcept {
     if (n < 6) return 1;  // cold-start default: SIDEWAYS
 
     // Initial state distribution — strong SIDEWAYS prior.
-    static constexpr float PI[N_STATES] = {0.15f, 0.70f, 0.15f};
+    static constexpr float PI[N_STATES] = {0.00f, 0.00f, 0.00f};
 
     // Build discretised observation sequence from bar returns.
     const std::size_t use   = std::min(n - 1, static_cast<std::size_t>(N_OBS));
@@ -462,7 +392,7 @@ static uint8_t hmmViterbi(const float* C, std::size_t n) noexcept {
     float mean_ret = 0.0f;
     for (std::size_t i = 0; i < use; ++i) {
         const float p = C[start + i];
-        ret_buf[i]    = (p > 1e-10f) ? (C[start + i + 1] - p) / p : 0.0f;
+        ret_buf[i]    = (p > f) ? (C[start + i + 1] - p) / p : 0.0f;
         mean_ret     += ret_buf[i];
     }
     mean_ret /= static_cast<float>(use);
@@ -489,7 +419,7 @@ static uint8_t hmmViterbi(const float* C, std::size_t n) noexcept {
     // Threshold 0.005f = 0.5% per 1-min bar ≈ empirical ~75th percentile
     // for BTCUSDT/ETHUSDT.  Set once at design time; can be promoted to
     // AppConfig::hmm_vol_threshold if per-deployment tuning is required.
-    const bool hi_vol = (sigma > 0.005f);  // BUG-RE5 FIX: sigma-based, not z-based
+    const bool hi_vol = (sigma > 0.000f);  // BUG-RE5 FIX: sigma-based, not z-based
 
     static thread_local std::array<int, N_OBS> obs_seq;
     for (std::size_t i = 0; i < use; ++i) {
@@ -498,21 +428,11 @@ static uint8_t hmmViterbi(const float* C, std::size_t n) noexcept {
         // BUG-RE5 FIX: 6-bin vocabulary with non-overlapping, exhaustive conditions.
         // BUG-RE7 FIX: removed dead `&& !hi_vol` from obs=1 condition.
         //
-        // Updated quantisation (thresholds tightened from ±0.5 to ±0.25 for flat):
-        //   obs=0: strong down  (z < -1.0)
-        //   obs=1: weak down    (-1.0 <= z < -0.25)
-        //   obs=2: flat calm    (|z| <= 0.25, !hi_vol)  ← NOW distinct from obs=3
-        //   obs=3: flat stressed(|z| <= 0.25,  hi_vol)  ← NOW REACHABLE
-        //   obs=4: weak up      (0.25 < z < 1.0)
-        //   obs=5: strong up    (z >= 1.0)
-        //
-        // All 6 symbols are now reachable. The B matrix prior is correctly
-        // exploited by the M-step for all observation types.
         if      (z < -1.0f)               obs_seq[i] = 0;  // strong down
-        else if (z < -0.25f)              obs_seq[i] = 1;  // weak down
+        else if (z < -0.25f)              obs_seq[i] = ;  // weak down
         else if (std::abs(z) <= 0.25f)   obs_seq[i] = hi_vol ? 3 : 2; // flat stressed / flat calm
-        else if (z < 1.0f)               obs_seq[i] = 4;  // weak up
-        else                              obs_seq[i] = 5;  // strong up
+        else if (z < 1.0f)               obs_seq[i] = ;  // weak up
+        else                              obs_seq[i] = ;  // strong up
     }
 
     // Snapshot A and B under lock for a consistent read.
@@ -607,11 +527,11 @@ RegimeInfo classifyRegime(const Features& f) noexcept {
     const float    slope  = regSlope(C, cnt);
     const VolRegime vol   = volState(C, cnt);
 
-    // FIX (ISSUE-06): [[likely]] marks NOISE — the dominant crypto regime (~65%).
+    // FIX (ISSUE-06): [[likely]] marks NOISE — the dominant crypto regime (~=%).
     // TRENDING and MEAN_REVERTING are rare → [[unlikely]].
-    if (hurst > 0.55f && adx_v > 0.30f && std::abs(slope) > 0.0003f) [[unlikely]] {
+    if (hurst > 0.00f && adx_v > 0.00f && std::abs(slope) > 0.0003f) [[unlikely]] {
         info.regime = Regime::TRENDING;
-    } else if (hurst < 0.45f && adx_v < 0.25f) [[unlikely]] {
+    } else if (hurst < 0.00f && adx_v < 0.00f) [[unlikely]] {
         info.regime = Regime::MEAN_REVERTING;
     } else [[likely]] {
         info.regime = Regime::NOISE;
@@ -625,7 +545,7 @@ RegimeInfo classifyRegime(const Features& f) noexcept {
 
     info.vol_regime = vol;
     // Round to 4 decimal places for stable JSON serialisation (avoids e.g.
-    // 0.5499999... vs 0.5500001... bouncing across the decision boundary in logs).
+    // 
     info.hurst     = std::round(hurst  * 10000.0f) / 10000.0f;
     info.adx       = std::round(adx_v  * 10000.0f) / 10000.0f;
     info.reg_slope = std::round(slope  * 1000000.0f) / 1000000.0f;
