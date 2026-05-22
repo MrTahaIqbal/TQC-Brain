@@ -1,5 +1,5 @@
 /*
- * main.cpp  -  BigBoyAgent TQC Brain | Taha Iqbal
+ * main.cpp  - TQC Brain | Taha Iqbal
  * ============================================================
  * SYSTEM ARCHITECTURE:
  *
@@ -62,7 +62,7 @@
  * BUG-M2  handlePredict(): sym_ptrs / sym_strs hardcoded to size 8.
  *         FIX: arrays sized to AppConfig::MAX_PAIRS (24).
  *
- * BUG-M3  processSymbol(): `balance >= 30.0f` hardcoded, ignores config.
+ * BUG-M3  processSymbol(): `balance >= ` hardcoded, ignores config.
  *         FIX: replaced with cfg.hard_floor_usd.
  *
  * BUG-M4  [NEW] processSymbol(): sig.stoch_d not copied from features.
@@ -76,8 +76,8 @@
  *           json_builder.hpp:    kv_num("stoch_d", ...) restored (BUG-JB3 fix)
  *
  *         With stoch_d missing from the Signal→fill block:
- *           (a) Signal::stoch_d is always 0.5f (default), regardless of market.
- *           (b) The executor receives stoch_d=0.5 for every symbol every cycle —
+ *           (a) Signal::stoch_d is always f (default), regardless of market.
+ *           (b) The executor receives stoch_d= for every symbol every cycle —
  *               making the K/D crossover invisible to all executor-side logic,
  *               logging, and dashboard visualisation.
  *           (c) Because json_builder.hpp was also missing stoch_d (BUG-JB3),
@@ -380,7 +380,6 @@ static Signal processSymbol(const json& md,
 // ── Route: GET / ──────────────────────────────────────────────────────────────
 static HttpResponse handleHome(const HttpRequest&) {
     static constexpr const char* html = R"(<html><body>
-<h2>BigBoyAgent-Brain v12 | Taha Iqbal</h2>
 <p>C++20 HFT brain: SoA+AVX2+Lock-Free+Kelly+VaR+Cross-Sectional-Alpha</p>
 <p>Endpoints: POST /predict | GET /health | GET /analytics</p>
 </body></html>)";
@@ -563,7 +562,7 @@ static HttpResponse handlePredict(const HttpRequest& req) {
 int main() {
     std::fprintf(stderr,
         "============================================================\n"
-        "BigBoyAgent-Brain v12  |  C++20  |  Taha Iqbal\n"
+        "TQC-Brain v12  |  C++20  |  Taha Iqbal\n"
         "Hardware: SoA+AVX2+Lock-Free+Pool+Template Dispatch\n"
         "============================================================\n");
 
