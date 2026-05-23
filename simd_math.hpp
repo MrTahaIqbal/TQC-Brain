@@ -1,6 +1,6 @@
 #pragma once
 /*
- * simd_math.hpp  -  BigBoyAgent TQC Brain | Taha Iqbal
+ * simd_math.hpp  -  TQC Brain | Taha Iqbal
  * ============================================================
  * HARDWARE REQUIREMENT: SIMD VECTORISATION
  *
