@@ -1,6 +1,6 @@
 #pragma once
 /*
- * ring_buffer.hpp  -  BigBoyAgent TQC Brain | Taha Iqbal
+ * ring_buffer.hpp  -  TQC Brain | Taha Iqbal
  * ============================================================
  * HARDWARE REQUIREMENT: LOCK-FREE IPC
  *
