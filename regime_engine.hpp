@@ -1,6 +1,6 @@
 #pragma once
 /*
- * regime_engine.hpp  -  BigBoyAgent TQC Brain | Taha Iqbal
+ * regime_engine.hpp  -  TQC Brain | Taha Iqbal
  *
  * Market regime classification: TRENDING / MEAN_REVERTING / NOISE.
  *
