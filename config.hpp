@@ -1,7 +1,7 @@
 #pragma once
 /*
- * config.hpp  -  BigBoyAgent TQC Brain | Taha Iqbal
- *
+ * config.hpp  -  TQC Brain | Taha Iqbal
+ * // Note the risk parameters are set by me according to my plan structure
  * HARDWARE REQUIREMENT 3: ZERO-LATENCY LOGIC
  *
  * Template specialisation resolves regime-specific weights at compile time.
@@ -11,12 +11,7 @@
  * ── BUGS FIXED IN THIS VERSION ──────────────────────────────────────────────
  *
  * BUG-C1  AppConfig::validate() was missing entirely.
- *         loadConfig() returned true after reading values but never checked
- *         whether the loaded values were sane (e.g. leverage <= 0, risk_pct
- *         out of range, tiers in wrong order).  A typo in settings.json such
- *         as "LEVERAGE": 0 would silently produce division-by-zero in
- *         risk_engine.cpp and NaN margin values on every trade.
- *         FIX: added validate() declaration here; implemented in config.cpp.
+ *         
  *
  * BUG-C2  AppConfig::has_pair() iterated the full pairs array even after
  *         finding the symbol, because it used range-based iteration over
@@ -28,19 +23,9 @@
  *         (was already correct in the original; confirmed and documented).
  *
  * BUG-C3  CapitalTier in-class member initializers used brace-init syntax
- *         { 0.005f, 0.15f } which is aggregate-init and requires an
- *         implicit constructor.  Strictly correct in C++17 for a simple
- *         aggregate, but some MSVC and older Clang versions warn about
- *         "initializer list used for non-aggregate type" when struct has
- *         default member values.
- *         FIX: made CapitalTier fields explicitly default-initialised in
- *         the struct definition; AppConfig members use named assignment.
+ *        
  *
- * BUG-C4  getRegimeParams() was marked both `inline` and `constexpr`.
- *         In C++17 and later, `constexpr` functions are implicitly `inline`;
- *         the redundant `inline` keyword is harmless but causes -Wredundant-
- *         decls warnings on GCC 12+ and Clang 15+.
- *         FIX: removed the redundant `inline` keyword.
+ * 
  *
  * BUG-C5  [NEW] FINDING-S5 (audit) not implemented: vol_target_pct and
  *         kelly_coldstart were hardcoded constants inside risk_engine.cpp.
