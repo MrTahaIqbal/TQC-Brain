@@ -1,5 +1,5 @@
 /*
- * http_server.cpp  -  BigBoyAgent TQC Brain | Taha Iqbal
+ * http_server.cpp  -  TQC Brain | Taha Iqbal
  *
  * ── BUGS FIXED IN THIS VERSION ──────────────────────────────────────────────
  *
