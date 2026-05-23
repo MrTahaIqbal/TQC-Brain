@@ -1,6 +1,6 @@
 #pragma once
 /*
- * http_server.hpp  -  BigBoyAgent TQC Brain | Taha Iqbal
+ * http_server.hpp  -  TQC Brain | Taha Iqbal
  *
  * Production-grade POSIX HTTP/1.1 server — no external libraries.
  *
