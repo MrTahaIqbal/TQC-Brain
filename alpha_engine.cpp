@@ -1,5 +1,5 @@
 /*
- * alpha_engine.cpp  -  BigBoyAgent TQC Brain | Taha Iqbal
+ * alpha_engine.cpp  -  TQC Brain | Taha Iqbal
  *
  * Cross-sectional factor model:
  *   1. Momentum alpha     — rank by 20-bar ROC
