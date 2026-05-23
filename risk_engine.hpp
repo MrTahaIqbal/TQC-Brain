@@ -1,6 +1,6 @@
 #pragma once
 /*
- * risk_engine.hpp  -  BigBoyAgent TQC Brain | Taha Iqbal
+ * risk_engine.hpp  -  TQC Brain | Taha Iqbal
  *
  * Institutional position sizing: Kelly criterion + Historical VaR +
  * volatility targeting.  All state in fixed-size circular buffers — no heap.
