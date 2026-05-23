@@ -1,6 +1,6 @@
 /*
- * feature_engine.cpp  -  BigBoyAgent TQC Brain | Taha Iqbal
- *
+ * feature_engine.cpp  -  TQC Brain | Taha Iqbal
+ * // I have explain the bugs that I face in production so a user can easily understand that
  * Full technical indicator suite — all kernels SIMD-accelerated via simd_math.hpp.
  * No heap allocation: all scratch work uses thread_local g_scratch.
  *
