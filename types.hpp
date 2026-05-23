@@ -1,6 +1,6 @@
 #pragma once
 /*
- * types.hpp  -  BigBoyAgent TQC Brain | Taha Iqbal
+ * types.hpp  -  TQC Brain | Taha Iqbal
  *
  * All domain structs.  Design rules:
  *   - No std::string in structs on the hot path.
