@@ -1,6 +1,6 @@
 #pragma once
 /*
- * bar_store.hpp  -  BigBoyAgent TQC Brain | Taha Iqbal
+ * bar_store.hpp  -  TQC Brain | Taha Iqbal
  * ============================================================
  * DATA-ORIENTED DESIGN: Struct-of-Arrays (SoA) layout.
  *
