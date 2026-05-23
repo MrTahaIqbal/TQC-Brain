@@ -1,4 +1,4 @@
-# BigBoyAgent-Brain v12
+TQC-Brain
 
 > **Institutional-grade C++20 algorithmic trading brain — SIMD · Lock-Free · Zero-Heap hot path**
 
