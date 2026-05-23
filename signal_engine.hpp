@@ -1,6 +1,6 @@
 #pragma once
 /*
- * signal_engine.hpp  -  BigBoyAgent TQC Brain | Taha Iqbal
+ * signal_engine.hpp  -  TQC Brain | Taha Iqbal
  *
  * Converts normalised features + regime into a BUY/SELL/HOLD signal.
  *
