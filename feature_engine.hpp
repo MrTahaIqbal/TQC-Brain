@@ -1,6 +1,6 @@
 #pragma once
 /*
- * feature_engine.hpp  -  BigBoyAgent TQC Brain | Taha Iqbal
+ * feature_engine.hpp  -  TQC Brain | Taha Iqbal
  * ============================================================
  * Computes all technical indicators for one symbol per cycle.
  *
