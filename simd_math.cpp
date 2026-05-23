@@ -1,6 +1,6 @@
 /*
- * simd_math.cpp  -  BigBoyAgent TQC Brain | Taha Iqbal
- *
+ * simd_math.cpp  -  TQC Brain | Taha Iqbal
+ * // Note I have mentioned all the bugs that came in production so a user can understand that
  * Implements the out-of-line percentile() declared in simd_math.hpp.
  * All other functions in simd_math.hpp are inline — this file is minimal.
  *
