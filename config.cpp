@@ -1,5 +1,5 @@
 /*
- * config.cpp  -  BigBoyAgent TQC Brain | Taha Iqbal
+ * config.cpp  - TQC Brain | Taha Iqbal
  *
  * Implements globalConfig() singleton, loadConfig(), and AppConfig::validate().
  * Reads BRAIN_SECRET from the environment and all trading parameters
@@ -49,33 +49,11 @@
  *          FIX: validate() checks conservative ≤ standard ≤ aggressive
  *          for both risk_pct and max_margin_pct.
  *
- * BUG-CC6  Hard risk bounds were never validated against tiers.
- *          If min_risk_pct > tier_conservative.risk_pct, the clamp would
- *          always override the tier — meaning the "conservative" tier was
- *          actually riskier than its definition.
- *          FIX: validate() checks min_risk_pct ≤ tier_conservative.risk_pct
- *          and max_risk_pct ≥ tier_aggressive.risk_pct.
  *
- * BUG-CC7  Secret key was not trimmed of whitespace.
- *          On some Linux shells, exporting BRAIN_SECRET with a trailing
- *          newline (e.g. export BRAIN_SECRET=$(cat secret.txt) where the
- *          file has a trailing newline) stores the newline in the env var.
- *          strncpy then copies the newline into cfg.secret_key, causing all
- *          HMAC-SHA256 authentication checks to fail at runtime.
- *          FIX: rtrim_secret() strips trailing whitespace/newlines.
  *
- * BUG-CC8  [NEW] slip_pct, hard_floor_usd, ranker weights, vol_target_pct,
- *          and kelly_coldstart were never loaded from JSON.
- *          All five ranker weight fields exist in AppConfig and all affect
- *          signal selection, yet none appeared in the JSON parsing loop.
- *          vol_target_pct and kelly_coldstart (FINDING-S5 fix) were also
- *          absent despite being declared in config.hpp.  All fields were
- *          permanently pinned to their in-code defaults with no way to
- *          override from settings.json.
- *          FIX: slip_pct, hard_floor_usd, and all five ranker weights are
- *          now loaded from the top-level JSON object.  vol_target_pct and
- *          kelly_coldstart are loaded from the CAPITAL_TIERS block.
- *          Startup summary extended to log their resolved values.
+ *
+ *
+ * 
  *
  * BUG-CC9  [NEW] validate() was missing checks for slip_pct, hard_floor_usd,
  *          ranker weight sum, vol_target_pct, and kelly_coldstart.
@@ -88,31 +66,9 @@
  *          FIX: validate() now checks all five new fields and verifies the
  *          weight sum is within 1e-4f of 1.0f.
  *
- * BUG-CC10 [NEW] Individual pair strings not validated before loading.
- *          The PAIRS parsing loop copied every array element without checking
- *          that the string was non-empty and alphanumeric.  A config entry
- *          like "PAIRS": ["BTCUSDT", "", "INVALID PAIR"] loaded an empty
- *          slot (which has_pair("") may spuriously match) and a symbol with
- *          an embedded space (which causes Binance API failures at runtime
- *          with a cryptic HTTP 400 error and no clear log pointing back to
- *          the config).  Errors should be caught at load time, not at the
- *          exchange API boundary minutes later during the first trade cycle.
- *          FIX: each symbol in PAIRS is validated: non-empty, all
- *          alphanumeric, and length within [3, 15] chars.  Invalid symbols
- *          are skipped with a WARNING; if all symbols are invalid the load
- *          fails via the existing num_pairs == 0 guard (BUG-CC2 FIX).
+ * 
  *
- * BUG-CC11 [NEW] loadConfig() mutated cfg before validate() succeeded;
- *          caller received partial state on validation failure.
- *          If validate() failed, loadConfig() returned false but cfg (which
- *          is typically g_config — the global singleton) had already been
- *          partially written with the new values.  Any code path that ignored
- *          the return value, or that read globalConfig() after a failed reload,
- *          would operate on a corrupted configuration object silently.
- *          FIX: all JSON values are loaded into a local AppConfig tmp{}.
- *          Only after tmp.validate() succeeds is cfg = tmp performed as an
- *          atomic overwrite.  The caller's cfg object is never modified on
- *          any failure path.
+ * 
  *
  * BUG-CC12 [NEW] fee_pct upper bound in validate() was too permissive and
  *          self-contradictory.
@@ -149,7 +105,7 @@ AppConfig& globalConfig() noexcept { return g_config; }
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
-// BUG-CC7 FIX: strip trailing whitespace from secret key copied from env.
+
 static void rtrim_secret(char* buf, std::size_t buf_size) noexcept {
     if (!buf || buf_size == 0) return;
     std::size_t len = std::strlen(buf);
