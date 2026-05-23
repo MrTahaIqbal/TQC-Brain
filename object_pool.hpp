@@ -1,6 +1,6 @@
 #pragma once
 /*
- * object_pool.hpp  -  BigBoyAgent TQC Brain | Taha Iqbal
+ * object_pool.hpp  - TQC Brain | Taha Iqbal
  * ============================================================
  * HARDWARE REQUIREMENT: NO new/delete IN HOT PATH
  *
