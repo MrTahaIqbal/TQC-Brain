@@ -1,6 +1,6 @@
 #pragma once
 /*
- * tracking.hpp  -  BigBoyAgent TQC Brain | Taha Iqbal
+ * tracking.hpp  -  TQC Brain | Taha Iqbal
  *
  * Four stateful trackers in one translation unit:
  *   1. Analytics       — per-symbol P&L, Sharpe, Sortino, Calmar
