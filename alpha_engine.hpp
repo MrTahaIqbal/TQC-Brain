@@ -1,6 +1,6 @@
 #pragma once
 /*
- * alpha_engine.hpp  -  BigBoyAgent TQC Brain | Taha Iqbal
+ * alpha_engine.hpp  -  TQC Brain | Taha Iqbal
  *
  * Cross-sectional alpha factors applied across the full signal universe.
  * Factors: momentum rank, low-vol anomaly, volume surge, quality (Hurst+ADX).
