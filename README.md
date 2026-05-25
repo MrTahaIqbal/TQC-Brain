@@ -18,8 +18,7 @@ The system demonstrates:
 - **Statistical models** (GARCH(1,1), HAR-RV, TSMOM, ARIMA(1,1,1))
 - **Market regime detection** (Hurst R/S, ADX, 3-state HMM Viterbi with online Baum-Welch M-step)
 - **Zero heap allocation** from HTTP request arrival to JSON response write
-// My main language is python I have converted this system to c++ and user are free to analysis of any bugs and can email at
-tahaiqbal773@gmail.com thanks
+
 ---
 
 ## Architecture
